@@ -29,7 +29,7 @@ updateName :: (Name -> Name) -> Con -> Con
 updateName f (NormalC n bts) = NormalC (f n) bts
 updateName f (RecC n vbts) = RecC (f n) vbts
 updateName f (InfixC bt1 n bt2) = InfixC bt1 (f n) bt2
-updateName f (ForallC bndrs cxt con) = ForallC bndrs cxt $ updateName f con
+updateName f (ForallC bndrs cx con) = ForallC bndrs cx $ updateName f con
 updateName _ g@GadtC {} = g
 updateName _ r@RecGadtC {} = r
 
