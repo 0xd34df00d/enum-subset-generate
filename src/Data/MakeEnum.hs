@@ -3,15 +3,20 @@
 
 module Data.MakeEnum(makeEnum) where
 
-import Language.Haskell.TH 
+import Language.Haskell.TH
 
 makeEnum :: Name -> [Name] -> Q [Dec]
 makeEnum tyName omissions = reify tyName >>= \case
-  TyConI (DataD cx name bndrs kind cons derivs) -> do
-    let cons' = updateName unmodule <$> filterCons omissions cons
-    let dec' = DataD cx (unmodule name) bndrs kind cons' derivs
-    pure [dec']
-  _ -> fail "unsupported data type"
+  TyConI dec -> do
+    case buildReducedEnum omissions dec of
+      Left err -> fail err
+      Right dec' -> pure [dec']
+  _ -> fail "unsupported type"
+
+buildReducedEnum :: [Name] -> Dec -> Either String Dec
+buildReducedEnum omissions (DataD cx name bndrs kind cons derivs) = Right $ DataD cx (unmodule name) bndrs kind cons' derivs
+  where cons' = updateName unmodule <$> filterCons omissions cons
+buildReducedEnum _ _ = Left "unsupported type"
 
 filterCons :: [Name] -> [Con] -> [Con]
 filterCons omit = filter $ (`notElem` omit') . conName
