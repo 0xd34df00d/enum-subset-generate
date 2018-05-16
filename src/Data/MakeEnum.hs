@@ -14,9 +14,10 @@ makeEnum tyName omit = reify tyName >>= \case
     case buildReducedEnum omit' dec of
       Left err -> fail err
       Right (dec', origCons, name) -> do
-        fromFun <- buildFromFun name origCons
+        (fromSig, fromFun) <- buildFromFun name origCons
+        runIO $ putStrLn $ pprint fromSig
         runIO $ putStrLn $ pprint fromFun
-        pure [dec', fromFun]
+        pure [dec', fromSig, fromFun]
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
 
@@ -26,14 +27,18 @@ buildReducedEnum omit (DataD cx name bndrs kind cons derivs) = Right (DataD cx (
         cons' = updateName unmodule <$> filtered
 buildReducedEnum _ _ = Left "unsupported type"
 
-buildFromFun :: Name -> [Con] -> Q Dec
+buildFromFun :: Name -> [Con] -> Q (Dec, Dec)
 buildFromFun name cons = do
   Module _ (ModName thisModName) <- thisModule
+
+  let funName = mkName $ "from" <> nameBase name
+  let funSig = SigD funName $ ArrowT `AppT` ConT name `AppT` (ConT (mkName "Maybe") `AppT` ConT (thisModName <.> name))
+
   clauses <- mapMaybeM (mkClause thisModName) cons
   let fallback = Clause [WildP] (NormalB $ ConE $ mkName "Nothing") []
   let funDef = FunD funName $ clauses ++ [fallback]
 
-  pure funDef
+  pure (funSig, funDef)
 
   where
     mkClause thisModName (NormalC n ts) = do
