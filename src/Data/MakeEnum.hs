@@ -20,17 +20,20 @@ makeEnum tyName omit = reify tyName >>= \case
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
 
-buildReducedEnum :: [Maybe Name] -> Dec -> Either String (Dec, [Con], String)
-buildReducedEnum omit (DataD cx name bndrs kind cons derivs) = Right (DataD cx (unmodule name) bndrs kind cons' derivs, filtered, nameBase name)
+buildReducedEnum :: [Maybe Name] -> Dec -> Either String (Dec, [Con], Name)
+buildReducedEnum omit (DataD cx name bndrs kind cons derivs) = Right (DataD cx (unmodule name) bndrs kind cons' derivs, filtered, name)
   where filtered = filterCons omit cons
         cons' = updateName unmodule <$> filtered
 buildReducedEnum _ _ = Left "unsupported type"
 
-buildFromFun :: String -> [Con] -> Q Dec
+buildFromFun :: Name -> [Con] -> Q Dec
 buildFromFun name cons = do
   Module _ (ModName thisModName) <- thisModule
   clauses <- mapMaybeM (mkClause thisModName) cons
-  pure $ FunD (mkName $ "from" <> name) clauses
+  let funDef = FunD funName $ clauses
+
+  pure funDef
+
   where
     mkClause thisModName (NormalC n ts) = do
       binders <- replicateM (length ts) $ newName "p"
