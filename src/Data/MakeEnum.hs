@@ -15,8 +15,6 @@ makeEnum tyName omit = reify tyName >>= \case
       Left err -> fail err
       Right (dec', origCons, name) -> do
         (fromSig, fromFun) <- buildFromFun name origCons
-        runIO $ putStrLn $ pprint fromSig
-        runIO $ putStrLn $ pprint fromFun
         pure [dec', fromSig, fromFun]
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
