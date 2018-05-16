@@ -1,6 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Data.MakeEnum(makeEnum) where
+module Data.MakeEnum(
+    makeEnum,
+    makeEnumWith,
+    Options(..)
+  ) where
 
 import Control.Monad
 import Control.Monad.Extra
@@ -8,8 +12,15 @@ import Data.Monoid
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
+data Options = Options
+  {
+  }
+
 makeEnum :: Name -> [Name] -> Q [Dec]
-makeEnum tyName omit = reify tyName >>= \case
+makeEnum = makeEnumWith Options {}
+
+makeEnumWith :: Options -> Name -> [Name] -> Q [Dec]
+makeEnumWith options tyName omit = reify tyName >>= \case
   TyConI dec ->
     case buildReducedEnum omit' dec of
       Left err -> fail err
