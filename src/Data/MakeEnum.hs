@@ -30,7 +30,8 @@ buildFromFun :: Name -> [Con] -> Q Dec
 buildFromFun name cons = do
   Module _ (ModName thisModName) <- thisModule
   clauses <- mapMaybeM (mkClause thisModName) cons
-  let funDef = FunD funName $ clauses
+  let fallback = Clause [WildP] (NormalB $ ConE $ mkName "Nothing") []
+  let funDef = FunD funName $ clauses ++ [fallback]
 
   pure funDef
 
