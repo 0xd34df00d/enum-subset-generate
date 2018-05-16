@@ -3,24 +3,47 @@
 
 module Data.MakeEnum(makeEnum) where
 
+import Control.Monad
+import Control.Monad.Extra
+import Data.Monoid
 import Language.Haskell.TH
+import Language.Haskell.TH.Syntax
 
 makeEnum :: Name -> [Name] -> Q [Dec]
-makeEnum tyName omissions = reify tyName >>= \case
-  TyConI dec -> do
-    case buildReducedEnum omissions dec of
+makeEnum tyName omit = reify tyName >>= \case
+  TyConI dec ->
+    case buildReducedEnum omit' dec of
       Left err -> fail err
-      Right dec' -> pure [dec']
+      Right (dec', origCons, name) -> do
+        fromFun <- buildFromFun name origCons
+        runIO $ putStrLn $ pprint fromFun
+        pure [dec', fromFun]
   _ -> fail "unsupported type"
+  where omit' = Just <$> omit
 
-buildReducedEnum :: [Name] -> Dec -> Either String Dec
-buildReducedEnum omissions (DataD cx name bndrs kind cons derivs) = Right $ DataD cx (unmodule name) bndrs kind cons' derivs
-  where cons' = updateName unmodule <$> filterCons omissions cons
+buildReducedEnum :: [Maybe Name] -> Dec -> Either String (Dec, [Con], String)
+buildReducedEnum omit (DataD cx name bndrs kind cons derivs) = Right (DataD cx (unmodule name) bndrs kind cons' derivs, filtered, nameBase name)
+  where filtered = filterCons omit cons
+        cons' = updateName unmodule <$> filtered
 buildReducedEnum _ _ = Left "unsupported type"
 
-filterCons :: [Name] -> [Con] -> [Con]
-filterCons omit = filter $ (`notElem` omit') . conName
-  where omit' = Just <$> omit
+buildFromFun :: String -> [Con] -> Q Dec
+buildFromFun name cons = do
+  Module _ (ModName thisModName) <- thisModule
+  clauses <- mapMaybeM (mkClause thisModName) cons
+  pure $ FunD (mkName $ "from" <> name) clauses
+  where
+    mkClause thisModName (NormalC n ts) = do
+      binders <- replicateM (length ts) $ newName "p"
+      let body = NormalB $ AppE (ConE $ mkName "Just") $ ConE $ thisModName <.> n
+      pure $ Just $ Clause [ConP n $ VarP <$> binders] body []
+    mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
+
+(<.>) :: String -> Name -> Name
+(<.>) modName n = mkName $ modName <> "." <> nameBase n
+
+filterCons :: [Maybe Name] -> [Con] -> [Con]
+filterCons omit = filter $ (`notElem` omit) . conName
 
 conName :: Con -> Maybe Name
 conName (NormalC n _) = Just n
