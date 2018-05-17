@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, RecordWildCards #-}
 
 module Data.MakeEnum(
     makeEnum,
@@ -8,21 +8,25 @@ module Data.MakeEnum(
 
 import Control.Monad
 import Control.Monad.Extra
+import Data.Maybe
 import Data.Monoid
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
 data Options = Options
-  {
+  { newEnumName :: Maybe String
   }
 
+defaultOptions :: Options
+defaultOptions = Options Nothing
+
 makeEnum :: Name -> [Name] -> Q [Dec]
-makeEnum = makeEnumWith Options {}
+makeEnum = makeEnumWith defaultOptions
 
 makeEnumWith :: Options -> Name -> [Name] -> Q [Dec]
 makeEnumWith options tyName omit = reify tyName >>= \case
   TyConI dec ->
-    case buildReducedEnum omit' dec of
+    case buildReducedEnum options omit' dec of
       Left err -> fail err
       Right (dec', origCons, name) -> do
         (fromSig, fromFun) <- buildFromFun name origCons
@@ -30,11 +34,12 @@ makeEnumWith options tyName omit = reify tyName >>= \case
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
 
-buildReducedEnum :: [Maybe Name] -> Dec -> Either String (Dec, [Con], Name)
-buildReducedEnum omit (DataD cx name bndrs kind cons derivs) = Right (DataD cx (unmodule name) bndrs kind cons' derivs, filtered, name)
+buildReducedEnum :: Options -> [Maybe Name] -> Dec -> Either String (Dec, [Con], Name)
+buildReducedEnum Options { .. } omit (DataD cx name bndrs kind cons derivs) = Right (DataD cx name' bndrs kind cons' derivs, filtered, name)
   where filtered = filterCons omit cons
         cons' = updateName unmodule <$> filtered
-buildReducedEnum _ _ = Left "unsupported type"
+        name' = fromMaybe (unmodule name) $ mkName <$> newEnumName
+buildReducedEnum _ _ _ = Left "unsupported type"
 
 buildFromFun :: Name -> [Con] -> Q (Dec, Dec)
 buildFromFun name cons = do
