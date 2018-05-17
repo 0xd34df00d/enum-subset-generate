@@ -53,7 +53,7 @@ deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
 buildReducedEnum :: DeducedOptions -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
 buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons derivs) = (DataD cx name' bndrs kind cons' derivs, filtered, name)
   where filtered = filterCons omit cons
-        cons' = updateName unmodule <$> filtered
+        cons' = updateName (mkName . nameBase) <$> filtered
         name' = mkName $ runIdentity newEnumName
 
 buildFromFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
@@ -97,6 +97,3 @@ updateName f (InfixC bt1 n bt2) = InfixC bt1 (f n) bt2
 updateName f (ForallC bndrs cx con) = ForallC bndrs cx $ updateName f con
 updateName _ g@GadtC {} = g
 updateName _ r@RecGadtC {} = r
-
-unmodule :: Name -> Name
-unmodule = mkName . nameBase
