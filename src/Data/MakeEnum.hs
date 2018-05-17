@@ -13,9 +13,11 @@ import Data.Monoid
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
-data Options = Options
-  { newEnumName :: Maybe String
+data OptionsT f = Options
+  { newEnumName :: f String
   }
+
+type Options = OptionsT Maybe
 
 defaultOptions :: Options
 defaultOptions = Options Nothing
