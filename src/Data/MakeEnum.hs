@@ -8,6 +8,7 @@ module Data.MakeEnum(
 
 import Control.Monad
 import Control.Monad.Extra
+import Data.Functor.Identity
 import Data.Maybe
 import Data.Monoid
 import Language.Haskell.TH
@@ -19,6 +20,8 @@ data OptionsT f = Options
 
 type Options = OptionsT Maybe
 
+type DeducedOptions = OptionsT Identity
+
 defaultOptions :: Options
 defaultOptions = Options Nothing
 
@@ -28,8 +31,9 @@ makeEnum = makeEnumWith defaultOptions
 makeEnumWith :: Options -> Name -> [Name] -> Q [Dec]
 makeEnumWith options tyName omit = reify tyName >>= \case
   TyConI (unwrapDec -> Just dec) -> do
-    let (dec', origCons, name) = buildReducedEnum options omit' dec
-    (fromSig, fromFun) <- buildFromFun options name origCons
+    let deducedOpts = deduceOptions dec options
+    let (dec', origCons, name) = buildReducedEnum deducedOpts omit' dec
+    (fromSig, fromFun) <- buildFromFun deducedOpts name origCons
     pure [dec', fromSig, fromFun]
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
@@ -40,11 +44,17 @@ unwrapDec :: Dec -> Maybe DataDef
 unwrapDec (DataD cx name bndrs kind cons derivs) = Just $ DataDef cx name bndrs kind cons derivs
 unwrapDec _ = Nothing
 
-buildReducedEnum :: Options -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
+deduceOptions :: DataDef -> Options -> DeducedOptions
+deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
+  Options
+    { newEnumName = Identity $ fromMaybe (nameBase name) newEnumName
+    }
+
+buildReducedEnum :: DeducedOptions -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
 buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons derivs) = (DataD cx name' bndrs kind cons' derivs, filtered, name)
   where filtered = filterCons omit cons
         cons' = updateName unmodule <$> filtered
-        name' = fromMaybe (unmodule name) $ mkName <$> newEnumName
+        name' = mkName $ runIdentity newEnumName
 
 buildFromFun :: Name -> [Con] -> Q (Dec, Dec)
 buildFromFun name cons = do
