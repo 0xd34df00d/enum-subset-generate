@@ -56,12 +56,12 @@ buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons derivs) = 
         cons' = updateName unmodule <$> filtered
         name' = mkName $ runIdentity newEnumName
 
-buildFromFun :: Name -> [Con] -> Q (Dec, Dec)
-buildFromFun name cons = do
+buildFromFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
+buildFromFun Options { .. } name cons = do
   Module _ (ModName thisModName) <- thisModule
 
   let funName = mkName $ "from" <> nameBase name
-  let funSig = SigD funName $ ArrowT `AppT` ConT name `AppT` (ConT (mkName "Maybe") `AppT` ConT (thisModName <.> name))
+  let funSig = SigD funName $ ArrowT `AppT` ConT name `AppT` (ConT (mkName "Maybe") `AppT` ConT (mkName $ runIdentity newEnumName))
 
   clauses <- mapMaybeM (mkClause thisModName) cons
   let fallback = Clause [WildP] (NormalB $ ConE $ mkName "Nothing") []
