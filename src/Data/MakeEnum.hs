@@ -16,6 +16,7 @@ import Language.Haskell.TH.Syntax
 
 data OptionsT f = Options
   { newEnumName :: f String
+  , fromFunctionName :: f String
   }
 
 type Options = OptionsT Maybe
@@ -23,7 +24,7 @@ type Options = OptionsT Maybe
 type DeducedOptions = OptionsT Identity
 
 defaultOptions :: Options
-defaultOptions = Options Nothing
+defaultOptions = Options Nothing Nothing
 
 makeEnum :: Name -> [Name] -> Q [Dec]
 makeEnum = makeEnumWith defaultOptions
@@ -48,6 +49,7 @@ deduceOptions :: DataDef -> Options -> DeducedOptions
 deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
   Options
     { newEnumName = Identity $ fromMaybe (nameBase name) newEnumName
+    , fromFunctionName = Identity $ fromMaybe ("from" <> nameBase name) fromFunctionName
     }
 
 buildReducedEnum :: DeducedOptions -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
@@ -60,7 +62,7 @@ buildFromFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
 buildFromFun Options { .. } name cons = do
   Module _ (ModName thisModName) <- thisModule
 
-  let funName = mkName $ "from" <> nameBase name
+  let funName = mkName $ runIdentity fromFunctionName
   let funSig = SigD funName $ ArrowT `AppT` ConT name `AppT` (ConT (mkName "Maybe") `AppT` ConT (mkName $ runIdentity newEnumName))
 
   clauses <- mapMaybeM (mkClause thisModName) cons
