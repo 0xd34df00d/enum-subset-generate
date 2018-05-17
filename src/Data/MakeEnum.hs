@@ -4,7 +4,8 @@ module Data.MakeEnum(
     makeEnum,
     makeEnumWith,
     OptionsT(..),
-    Options
+    Options,
+    defaultOptions
   ) where
 
 import Control.Monad
