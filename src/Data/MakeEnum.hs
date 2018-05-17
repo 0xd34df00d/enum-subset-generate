@@ -3,7 +3,8 @@
 module Data.MakeEnum(
     makeEnum,
     makeEnumWith,
-    Options(..)
+    OptionsT(..),
+    Options
   ) where
 
 import Control.Monad
