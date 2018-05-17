@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, RecordWildCards #-}
+{-# LANGUAGE LambdaCase, RecordWildCards, ViewPatterns #-}
 
 module Data.MakeEnum(
     makeEnum,
@@ -25,21 +25,24 @@ makeEnum = makeEnumWith defaultOptions
 
 makeEnumWith :: Options -> Name -> [Name] -> Q [Dec]
 makeEnumWith options tyName omit = reify tyName >>= \case
-  TyConI dec ->
-    case buildReducedEnum options omit' dec of
-      Left err -> fail err
-      Right (dec', origCons, name) -> do
-        (fromSig, fromFun) <- buildFromFun name origCons
-        pure [dec', fromSig, fromFun]
+  TyConI (unwrapDec -> Just dec) -> do
+    let (dec', origCons, name) = buildReducedEnum options omit' dec
+    (fromSig, fromFun) <- buildFromFun options name origCons
+    pure [dec', fromSig, fromFun]
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
 
-buildReducedEnum :: Options -> [Maybe Name] -> Dec -> Either String (Dec, [Con], Name)
-buildReducedEnum Options { .. } omit (DataD cx name bndrs kind cons derivs) = Right (DataD cx name' bndrs kind cons' derivs, filtered, name)
+data DataDef = DataDef Cxt Name [TyVarBndr] (Maybe Kind) [Con] [DerivClause]
+
+unwrapDec :: Dec -> Maybe DataDef
+unwrapDec (DataD cx name bndrs kind cons derivs) = Just $ DataDef cx name bndrs kind cons derivs
+unwrapDec _ = Nothing
+
+buildReducedEnum :: Options -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
+buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons derivs) = (DataD cx name' bndrs kind cons' derivs, filtered, name)
   where filtered = filterCons omit cons
         cons' = updateName unmodule <$> filtered
         name' = fromMaybe (unmodule name) $ mkName <$> newEnumName
-buildReducedEnum _ _ _ = Left "unsupported type"
 
 buildFromFun :: Name -> [Con] -> Q (Dec, Dec)
 buildFromFun name cons = do
