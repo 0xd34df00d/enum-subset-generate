@@ -29,10 +29,10 @@ defaultOptions :: Options
 defaultOptions = Options Nothing Nothing
 
 makeEnum :: Name -> [Name] -> Q [Dec]
-makeEnum = makeEnumWith defaultOptions
+makeEnum tyName omit = makeEnumWith tyName omit defaultOptions
 
-makeEnumWith :: Options -> Name -> [Name] -> Q [Dec]
-makeEnumWith options tyName omit = reify tyName >>= \case
+makeEnumWith :: Name -> [Name] -> Options -> Q [Dec]
+makeEnumWith tyName omit options = reify tyName >>= \case
   TyConI (unwrapDec -> Just dec) -> do
     let deducedOpts = deduceOptions dec options
     let (dec', origCons, name) = buildReducedEnum deducedOpts omit' dec
