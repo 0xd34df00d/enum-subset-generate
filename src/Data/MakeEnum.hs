@@ -19,6 +19,7 @@ import Language.Haskell.TH.Syntax
 data OptionsT f = Options
   { newEnumName :: f String
   , fromFunctionName :: f String
+  , toFunctionName :: f String
   , ctorNameModifier :: String -> String
   }
 
@@ -27,7 +28,7 @@ type Options = OptionsT Maybe
 type DeducedOptions = OptionsT Identity
 
 defaultOptions :: Options
-defaultOptions = Options Nothing Nothing id
+defaultOptions = Options Nothing Nothing Nothing id
 
 makeEnum :: Name -> [Name] -> Q [Dec]
 makeEnum tyName omit = makeEnumWith tyName omit defaultOptions
@@ -38,7 +39,8 @@ makeEnumWith tyName omit options = reify tyName >>= \case
     let deducedOpts = deduceOptions dec options
     let (dec', origCons, name) = buildReducedEnum deducedOpts omit' dec
     (fromSig, fromFun) <- buildFromFun deducedOpts name origCons
-    pure [dec', fromSig, fromFun]
+    (toSig, toFun) <- buildToFun deducedOpts name origCons
+    pure [dec', fromSig, fromFun, toSig, toFun]
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
 
@@ -54,6 +56,7 @@ deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
   Options
     { newEnumName = Identity $ fromMaybe (nameBase name) newEnumName
     , fromFunctionName = Identity $ fromMaybe ("from" <> nameBase name) fromFunctionName
+    , toFunctionName = Identity $ fromMaybe ("to" <> nameBase name) toFunctionName
     , ..
     }
 
@@ -82,6 +85,26 @@ buildFromFun Options { .. } name cons = do
       let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
       let body = NormalB $ AppE (ConE $ mkName "Just") $ ConE thisName
       pure $ Just $ Clause [ConP n $ VarP <$> binders] body []
+    mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
+
+buildToFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
+buildToFun Options { .. } name cons = do
+  Module _ (ModName thisModName) <- thisModule
+
+  let funName = mkName $ runIdentity toFunctionName
+  let funSig = SigD funName $ ArrowT `AppT` ConT (mkName $ runIdentity newEnumName) `AppT` ConT name
+
+  clauses <- mapMaybeM (mkClause thisModName) cons
+  let funDef = FunD funName clauses
+
+  pure (funSig, funDef)
+
+  where
+    mkClause thisModName (NormalC n ts) = do
+      binders <- replicateM (length ts) $ newName "p"
+      let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
+      let body = NormalB $ ConE n
+      pure $ Just $ Clause [ConP thisName $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
 filterCons :: [Maybe Name] -> [Con] -> [Con]
