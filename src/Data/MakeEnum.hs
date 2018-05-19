@@ -19,6 +19,7 @@ import Language.Haskell.TH.Syntax
 data OptionsT f = Options
   { newEnumName :: f String
   , fromFunctionName :: f String
+  , ctorNameModifier :: String -> String
   }
 
 type Options = OptionsT Maybe
@@ -26,7 +27,7 @@ type Options = OptionsT Maybe
 type DeducedOptions = OptionsT Identity
 
 defaultOptions :: Options
-defaultOptions = Options Nothing Nothing
+defaultOptions = Options Nothing Nothing id
 
 makeEnum :: Name -> [Name] -> Q [Dec]
 makeEnum tyName omit = makeEnumWith tyName omit defaultOptions
@@ -52,12 +53,13 @@ deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
   Options
     { newEnumName = Identity $ fromMaybe (nameBase name) newEnumName
     , fromFunctionName = Identity $ fromMaybe ("from" <> nameBase name) fromFunctionName
+    , ..
     }
 
 buildReducedEnum :: DeducedOptions -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
 buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons derivs) = (DataD cx name' bndrs kind cons' derivs, filtered, name)
   where filtered = filterCons omit cons
-        cons' = updateName (mkName . nameBase) <$> filtered
+        cons' = updateName (mkName . ctorNameModifier . nameBase) <$> filtered
         name' = mkName $ runIdentity newEnumName
 
 buildFromFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
@@ -76,7 +78,8 @@ buildFromFun Options { .. } name cons = do
   where
     mkClause thisModName (NormalC n ts) = do
       binders <- replicateM (length ts) $ newName "p"
-      let body = NormalB $ AppE (ConE $ mkName "Just") $ ConE $ thisModName <.> n
+      let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
+      let body = NormalB $ AppE (ConE $ mkName "Just") $ ConE thisName
       pure $ Just $ Clause [ConP n $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
