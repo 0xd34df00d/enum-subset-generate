@@ -43,6 +43,7 @@ makeEnumWith tyName omit options = reify tyName >>= \case
   where omit' = Just <$> omit
 
 data DataDef = DataDef Cxt Name [TyVarBndr] (Maybe Kind) [Con] [DerivClause]
+             deriving (Eq, Ord, Show)
 
 unwrapDec :: Dec -> Maybe DataDef
 unwrapDec (DataD cx name bndrs kind cons derivs) = Just $ DataDef cx name bndrs kind cons derivs
