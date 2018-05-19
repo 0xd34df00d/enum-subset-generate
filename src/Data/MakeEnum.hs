@@ -73,7 +73,7 @@ buildFromFun Options { .. } name cons = do
   let funName = mkName $ runIdentity fromFunctionName
   let funSig = SigD funName $ ArrowT `AppT` ConT name `AppT` (ConT (mkName "Maybe") `AppT` ConT (mkName $ runIdentity newEnumName))
 
-  clauses <- mapMaybeM (mkClause thisModName) cons
+  clauses <- mapM (mkClause thisModName) cons
   let fallback = Clause [WildP] (NormalB $ ConE $ mkName "Nothing") []
   let funDef = FunD funName $ clauses ++ [fallback]
 
@@ -84,7 +84,7 @@ buildFromFun Options { .. } name cons = do
       binders <- replicateM (length ts) $ newName "p"
       let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
       let body = NormalB $ AppE (ConE $ mkName "Just") $ ConE thisName
-      pure $ Just $ Clause [ConP n $ VarP <$> binders] body []
+      pure $ Clause [ConP n $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
 buildToFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
@@ -94,7 +94,7 @@ buildToFun Options { .. } name cons = do
   let funName = mkName $ runIdentity toFunctionName
   let funSig = SigD funName $ ArrowT `AppT` ConT (mkName $ runIdentity newEnumName) `AppT` ConT name
 
-  clauses <- mapMaybeM (mkClause thisModName) cons
+  clauses <- mapM (mkClause thisModName) cons
   let funDef = FunD funName clauses
 
   pure (funSig, funDef)
@@ -104,7 +104,7 @@ buildToFun Options { .. } name cons = do
       binders <- replicateM (length ts) $ newName "p"
       let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
       let body = NormalB $ ConE n
-      pure $ Just $ Clause [ConP thisName $ VarP <$> binders] body []
+      pure $ Clause [ConP thisName $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
 filterCons :: [Maybe Name] -> [Con] -> [Con]
