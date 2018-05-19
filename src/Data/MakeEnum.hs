@@ -83,9 +83,6 @@ buildFromFun Options { .. } name cons = do
       pure $ Just $ Clause [ConP n $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
-(<.>) :: String -> Name -> Name
-(<.>) modName n = mkName $ modName <> "." <> nameBase n
-
 filterCons :: [Maybe Name] -> [Con] -> [Con]
 filterCons omit = filter $ (`notElem` omit) . conName
 
