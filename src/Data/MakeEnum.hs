@@ -69,7 +69,7 @@ buildFromFun Options { .. } name cons = do
     mkClause thisModName (NormalC n ts) = do
       binders <- replicateM (length ts) $ newName "p"
       let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
-      let body = NormalB $ AppE (ConE $ mkName "Just") $ ConE thisName
+      let body = NormalB $ ConE (mkName "Just") `AppE` ConE thisName
       pure $ Clause [ConP n $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
