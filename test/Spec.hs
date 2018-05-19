@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 import Data.MakeEnum
+import Data.MakeEnum.Options
 
 import Enum
 

@@ -3,9 +3,6 @@
 module Data.MakeEnum(
     makeEnum,
     makeEnumWith,
-    OptionsT(..),
-    Options,
-    defaultOptions
   ) where
 
 import Control.Monad
@@ -15,19 +12,7 @@ import Data.Monoid
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
-data OptionsT f = Options
-  { newEnumName :: f String
-  , fromFunctionName :: f String
-  , toFunctionName :: f String
-  , ctorNameModifier :: String -> String
-  }
-
-type Options = OptionsT Maybe
-
-type DeducedOptions = OptionsT Identity
-
-defaultOptions :: Options
-defaultOptions = Options Nothing Nothing Nothing id
+import Data.MakeEnum.Options
 
 makeEnum :: Name -> [Name] -> Q [Dec]
 makeEnum tyName omit = makeEnumWith tyName omit defaultOptions
@@ -49,6 +34,8 @@ data DataDef = DataDef Cxt Name [TyVarBndr] (Maybe Kind) [Con] [DerivClause]
 unwrapDec :: Dec -> Maybe DataDef
 unwrapDec (DataD cx name bndrs kind cons derivs) = Just $ DataDef cx name bndrs kind cons derivs
 unwrapDec _ = Nothing
+
+type DeducedOptions = OptionsT Identity
 
 deduceOptions :: DataDef -> Options -> DeducedOptions
 deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
