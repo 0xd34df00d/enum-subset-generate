@@ -67,9 +67,9 @@ buildFromFun Options { .. } name cons = do
 
   where
     mkClause thisModName (NormalC n ts) = do
-      binders <- replicateM (length ts) $ newName "p"
       let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
-      let body = NormalB $ ConE (mkName "Just") `AppE` ConE thisName
+      binders <- replicateM (length ts) $ newName "p"
+      let body = NormalB $ ConE (mkName "Just") `AppE` (ConE thisName `foldBinders` binders)
       pure $ Clause [ConP n $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
@@ -87,11 +87,14 @@ buildToFun Options { .. } name cons = do
 
   where
     mkClause thisModName (NormalC n ts) = do
-      binders <- replicateM (length ts) $ newName "p"
       let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
-      let body = NormalB $ ConE n
+      binders <- replicateM (length ts) $ newName "p"
+      let body = NormalB $ ConE n `foldBinders` binders
       pure $ Clause [ConP thisName $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
+
+foldBinders :: Exp -> [Name] -> Exp
+foldBinders name = foldl AppE name . map VarE
 
 filterCons :: [Maybe Name] -> [Con] -> [Con]
 filterCons omit = filter $ (`notElem` omit) . conName
