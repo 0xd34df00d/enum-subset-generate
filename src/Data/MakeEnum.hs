@@ -48,7 +48,7 @@ deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
 
 buildReducedEnum :: DeducedOptions -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
 buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons derivs) = (DataD cx name' bndrs kind cons' derivs, filtered, name)
-  where filtered = filterCons omit cons
+  where filtered = filter ((`notElem` omit) . conName) cons
         cons' = updateName (mkName . ctorNameModifier . nameBase) <$> filtered
         name' = mkName $ runIdentity newEnumName
 
@@ -95,9 +95,6 @@ buildToFun Options { .. } name cons = do
 
 foldBinders :: Exp -> [Name] -> Exp
 foldBinders name = foldl AppE name . map VarE
-
-filterCons :: [Maybe Name] -> [Con] -> [Con]
-filterCons omit = filter $ (`notElem` omit) . conName
 
 conName :: Con -> Maybe Name
 conName (NormalC n _) = Just n
