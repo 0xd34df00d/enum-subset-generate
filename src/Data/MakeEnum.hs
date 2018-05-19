@@ -9,7 +9,6 @@ module Data.MakeEnum(
   ) where
 
 import Control.Monad
-import Control.Monad.Extra
 import Data.Functor.Identity
 import Data.Maybe
 import Data.Monoid
