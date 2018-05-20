@@ -49,8 +49,8 @@ deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
 
 buildReducedEnum :: DeducedOptions -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
 buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons derivs) = (DataD cx name' bndrs kind cons' derivs, filtered, name)
-  where filtered = filter ((`notElem` omit) . conName) cons
-        cons' = updateName (mkName . ctorNameModifier . nameBase) <$> filtered
+  where filtered = filter ((`notElem` omit) . (^? nameT)) cons
+        cons' = nameT `over` (mkName . ctorNameModifier . nameBase) <$> filtered
         name' = mkName $ runIdentity newEnumName
 
 buildFromFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
@@ -96,22 +96,6 @@ buildToFun Options { .. } name cons = do
 
 foldBinders :: Exp -> [Name] -> Exp
 foldBinders name = foldl AppE name . map VarE
-
-conName :: Con -> Maybe Name
-conName (NormalC n _) = Just n
-conName (RecC n _) = Just n
-conName (InfixC _ n _) = Just n
-conName (ForallC _ _ n) = conName n
-conName GadtC {} = Nothing
-conName RecGadtC {} = Nothing
-
-updateName :: (Name -> Name) -> Con -> Con
-updateName f (NormalC n bts) = NormalC (f n) bts
-updateName f (RecC n vbts) = RecC (f n) vbts
-updateName f (InfixC bt1 n bt2) = InfixC bt1 (f n) bt2
-updateName f (ForallC bndrs cx con) = ForallC bndrs cx $ updateName f con
-updateName _ g@GadtC {} = g
-updateName _ r@RecGadtC {} = r
 
 nameT :: Traversal' Con Name
 nameT f (NormalC n bts) = (`NormalC` bts) <$> f n
