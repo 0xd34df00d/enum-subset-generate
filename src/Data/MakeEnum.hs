@@ -11,6 +11,7 @@ import Data.Maybe
 import Data.Monoid
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
+import Lens.Micro hiding(filtered)
 
 import Data.MakeEnum.Options
 
@@ -111,3 +112,11 @@ updateName f (InfixC bt1 n bt2) = InfixC bt1 (f n) bt2
 updateName f (ForallC bndrs cx con) = ForallC bndrs cx $ updateName f con
 updateName _ g@GadtC {} = g
 updateName _ r@RecGadtC {} = r
+
+nameT :: Traversal' Con Name
+nameT f (NormalC n bts) = (`NormalC` bts) <$> f n
+nameT f (RecC n vbts) = (`RecC` vbts) <$> f n
+nameT f (InfixC bt1 n bt2) = (\n' -> InfixC bt1 n' bt2) <$> f n
+nameT f (ForallC tvbs cx n) = ForallC tvbs cx <$> nameT f n
+nameT _ c@GadtC {} = pure c
+nameT _ c@RecGadtC {} = pure c
