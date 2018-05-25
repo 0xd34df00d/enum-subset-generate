@@ -48,10 +48,11 @@ deduceOptions (DataDef _ name _ _ _ _) Options { .. } =
     }
 
 buildReducedEnum :: DeducedOptions -> [Maybe Name] -> DataDef -> (Dec, [Con], Name)
-buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons derivs) = (DataD cx name' bndrs kind cons' derivs, filtered, name)
+buildReducedEnum Options { .. } omit (DataDef cx name bndrs kind cons _) = (DataD cx name' bndrs kind cons' derivs, filtered, name)
   where filtered = filter ((`notElem` omit) . (^? nameT)) cons
         cons' = nameT `over` (mkName . ctorNameModifier . nameBase) <$> filtered
         name' = mkName $ runIdentity newEnumName
+        derivs = [DerivClause Nothing $ ConT <$> deriveClasses]
 
 buildFromFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
 buildFromFun Options { .. } name cons = do
