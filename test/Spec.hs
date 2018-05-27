@@ -44,12 +44,13 @@ makeEnumWith ''EnumWithFields ['EWFUnknown]
 instance Arbitrary EnumWithFieldsDerived where
   arbitrary = genericArbitrary uniform
 
-runTest :: (Arbitrary d, Eq d, Show d) => String -> (s -> Maybe d) -> (d -> s) -> SpecWith ()
-runTest str from to = describe str $ do
+runTest :: (Arbitrary d, Eq d, Show d) => String -> s -> (s -> Maybe d) -> (d -> s) -> SpecWith ()
+runTest str missing from to = describe str $ do
+  it "maps missing cases correctly" $ from missing `shouldBe` Nothing
   it "converts the subset fine" $ property $ \x -> from (to x) == Just x
 
 main :: IO ()
 main = hspec $ do
-  runTest "OtherModuleEnum" fromOtherModuleEnum toOtherModuleEnum
-  runTest "SameModuleEnum" fromSameModuleEnum toSameModuleEnum
-  runTest "EnumWithFields" fromEnumWithFields toEnumWithFields
+  runTest "OtherModuleEnum" OMEUnknown fromOtherModuleEnum toOtherModuleEnum
+  runTest "SameModuleEnum" SMEUnknown fromSameModuleEnum toSameModuleEnum
+  runTest "EnumWithFields" EWFUnknown fromEnumWithFields toEnumWithFields
