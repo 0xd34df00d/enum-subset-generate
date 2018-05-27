@@ -1,4 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
+
+import Generic.Random
+import GHC.Generics
+import Test.Hspec
+import Test.QuickCheck
 
 import Data.MakeEnum
 import Data.MakeEnum.Options
@@ -6,12 +12,23 @@ import Data.MakeEnum.Options
 import Enum
 
 makeEnumWith ''OtherModuleEnum ['OMEUnknown]
-  defaultOptions { newEnumName = Just "OtherModuleEnumDerived" }
+  defaultOptions { newEnumName = Just "OtherModuleEnumDerived"
+                 , deriveClasses = [''Eq, ''Ord, ''Show, ''Generic]
+                 }
+
+instance Arbitrary OtherModuleEnumDerived where
+  arbitrary = genericArbitrary uniform
 
 data SameModuleEnum = SMEUnknown | SMEVar1 | SMEVar2 | SMEVar3 deriving (Eq, Ord, Show)
 
 makeEnumWith ''SameModuleEnum ['SMEUnknown]
-  defaultOptions { newEnumName = Just "SameModuleEnumDerived", ctorNameModifier = ("Der" ++) }
+  defaultOptions { newEnumName = Just "SameModuleEnumDerived"
+                 , ctorNameModifier = ("Der" ++)
+                 , deriveClasses = [''Eq, ''Ord, ''Show, ''Generic]
+                 }
+
+instance Arbitrary SameModuleEnumDerived where
+  arbitrary = genericArbitrary uniform
 
 data EnumWithFields = EWFVar1 String
                     | EWFVar2 Int Int
@@ -19,7 +36,19 @@ data EnumWithFields = EWFVar1 String
                     deriving (Eq, Ord, Show)
 
 makeEnumWith ''EnumWithFields ['EWFUnknown]
-  defaultOptions { newEnumName = Just "EnumWithFieldsDerived", ctorNameModifier = ("Der" ++) }
+  defaultOptions { newEnumName = Just "EnumWithFieldsDerived"
+                 , ctorNameModifier = ("Der" ++)
+                 , deriveClasses = [''Eq, ''Ord, ''Show, ''Generic]
+                 }
+
+instance Arbitrary EnumWithFieldsDerived where
+  arbitrary = genericArbitrary uniform
 
 main :: IO ()
-main = putStrLn "If it compiles, it works"
+main = hspec $ do
+  describe "OtherModuleEnum" $
+    it "converts fine" $ property $ \x -> fromOtherModuleEnum (toOtherModuleEnum x) == Just x
+  describe "SameModuleEnum" $
+    it "converts fine" $ property $ \x -> fromSameModuleEnum (toSameModuleEnum x) == Just x
+  describe "EnumWithFields" $
+    it "converts fine" $ property $ \x -> fromEnumWithFields (toEnumWithFields x) == Just x

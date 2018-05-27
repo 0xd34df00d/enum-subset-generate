@@ -33,3 +33,6 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - enum-subset-generate
+    - hspec
+    - QuickCheck
+    - generic-random
