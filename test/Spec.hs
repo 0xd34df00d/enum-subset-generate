@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 import Generic.Random
-import GHC.Generics
+import GHC.Generics(Generic)
 import Test.Hspec
 import Test.QuickCheck
 
