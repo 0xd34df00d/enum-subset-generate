@@ -10,7 +10,7 @@ extra-source-files:
 - README.md
 - ChangeLog.md
 
-synopsis:            Generate a type with a subset of constructors with the corresponding surjection and injection
+synopsis:            Generate an ADT being a subset of another ADT, and the corresponding mappings.
 category:            Data
 
 description:         Please see the README on GitHub at <https://github.com/0xd34df00d/enum-subset-generate#readme>
