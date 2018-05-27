@@ -44,11 +44,12 @@ makeEnumWith ''EnumWithFields ['EWFUnknown]
 instance Arbitrary EnumWithFieldsDerived where
   arbitrary = genericArbitrary uniform
 
+runTest :: (Arbitrary d, Eq d, Show d) => String -> (s -> Maybe d) -> (d -> s) -> SpecWith ()
+runTest str from to = describe str $ do
+  it "converts the subset fine" $ property $ \x -> from (to x) == Just x
+
 main :: IO ()
 main = hspec $ do
-  describe "OtherModuleEnum" $
-    it "converts fine" $ property $ \x -> fromOtherModuleEnum (toOtherModuleEnum x) == Just x
-  describe "SameModuleEnum" $
-    it "converts fine" $ property $ \x -> fromSameModuleEnum (toSameModuleEnum x) == Just x
-  describe "EnumWithFields" $
-    it "converts fine" $ property $ \x -> fromEnumWithFields (toEnumWithFields x) == Just x
+  runTest "OtherModuleEnum" fromOtherModuleEnum toOtherModuleEnum
+  runTest "SameModuleEnum" fromSameModuleEnum toSameModuleEnum
+  runTest "EnumWithFields" fromEnumWithFields toEnumWithFields
