@@ -1,5 +1,7 @@
 # enum-subset-generate
 
+[![Build Status](https://travis-ci.org/0xd34df00d/enum-subset-generate.svg?branch=master)](https://travis-ci.org/0xd34df00d/enum-subset-generate)
+
 Generates an ADT having a subset of constructors of some other ADT along with a
 pair of functions to map between the two.
 
