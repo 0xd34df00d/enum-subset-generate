@@ -29,7 +29,7 @@ makeEnumWith tyName omit options = reify tyName >>= \case
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
 
-data DataDef = DataDef Cxt Name [TyVarBndr] (Maybe Kind) [Con] [DerivClause]
+data DataDef = DataDef Cxt Name [TyVarBndr ()] (Maybe Kind) [Con] [DerivClause]
              deriving (Eq, Ord, Show)
 
 unwrapDec :: Dec -> Maybe DataDef
@@ -72,7 +72,7 @@ buildFromFun Options { .. } name cons = do
       let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
       binders <- replicateM (length ts) $ newName "p"
       let body = NormalB $ ConE (mkName "Just") `AppE` (ConE thisName `foldBinders` binders)
-      pure $ Clause [ConP n $ VarP <$> binders] body []
+      pure $ Clause [ConP n [] $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
 buildToFun :: DeducedOptions -> Name -> [Con] -> Q (Dec, Dec)
@@ -92,7 +92,7 @@ buildToFun Options { .. } name cons = do
       let thisName = mkName $ thisModName <> "." <> ctorNameModifier (nameBase n)
       binders <- replicateM (length ts) $ newName "p"
       let body = NormalB $ ConE n `foldBinders` binders
-      pure $ Clause [ConP thisName $ VarP <$> binders] body []
+      pure $ Clause [ConP thisName [] $ VarP <$> binders] body []
     mkClause _ p = fail $ "this type of constructor is not supported yet:\n" <> pprint p
 
 foldBinders :: Exp -> [Name] -> Exp
