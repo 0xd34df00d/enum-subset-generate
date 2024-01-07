@@ -29,7 +29,7 @@ makeEnumWith tyName omit options = reify tyName >>= \case
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
 
-data DataDef = DataDef Cxt Name [TyVarBndr ()] (Maybe Kind) [Con] [DerivClause]
+data DataDef = DataDef Cxt Name [TyVarBndr BndrVis] (Maybe Kind) [Con] [DerivClause]
              deriving (Eq, Ord, Show)
 
 unwrapDec :: Dec -> Maybe DataDef
