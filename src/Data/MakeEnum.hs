@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, RecordWildCards, ViewPatterns #-}
+{-# LANGUAGE LambdaCase, RecordWildCards, ViewPatterns, CPP #-}
 
 module Data.MakeEnum(
     makeEnum,
@@ -29,7 +29,13 @@ makeEnumWith tyName omit options = reify tyName >>= \case
   _ -> fail "unsupported type"
   where omit' = Just <$> omit
 
-data DataDef = DataDef Cxt Name [TyVarBndr BndrVis] (Maybe Kind) [Con] [DerivClause]
+#if MIN_VERSION_template_haskell(2, 21, 0)
+type BndrParam = BndrVis
+#else
+type BndrParam = ()
+#endif
+
+data DataDef = DataDef Cxt Name [TyVarBndr BndrParam] (Maybe Kind) [Con] [DerivClause]
              deriving (Eq, Ord, Show)
 
 unwrapDec :: Dec -> Maybe DataDef
